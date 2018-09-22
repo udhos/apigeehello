@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"io"
 	"log"
 	"net/http"
@@ -21,6 +22,8 @@ const (
 `
 )
 
+var html bool
+
 func main() {
 
 	keepalive := true
@@ -29,7 +32,11 @@ func main() {
 
 	addr := ":3000"
 
-	log.Printf("serving HTTP on TCP %s", addr)
+	if os.Getenv("HTML") != "" {
+		html = true
+	}
+
+	log.Printf("serving HTTP on TCP %s html=%v HTML=[%s]", addr, html, os.Getenv("HTML"))
 
 	if err := listenAndServe(addr, nil, keepalive); err != nil {
 		log.Fatalf("listenAndServe: %s: %v", addr, err)
@@ -42,27 +49,54 @@ func listenAndServe(addr string, handler http.Handler, keepalive bool) error {
 	return server.ListenAndServe()
 }
 
+func sendHeader(w http.ResponseWriter) {
+	if html {
+		io.WriteString(w, header)
+	}
+}
+
+func sendFooter(w http.ResponseWriter) {
+	if html {
+		io.WriteString(w, footer)
+	}
+}
+
+func sendTag(w http.ResponseWriter, tag, text string) {
+	if html {
+		io.WriteString(w, "<"+tag+">")
+	}
+	io.WriteString(w, text)
+	if html {
+		io.WriteString(w, "</"+tag+">")
+	}
+}
+
 func handlerRoot(w http.ResponseWriter, r *http.Request, keepalive bool) {
 	msg := fmt.Sprintf("handlerRoot: url=%s from=%s", r.URL.Path, r.RemoteAddr)
 	log.Print(msg)
 
 	if r.URL.Path != "/" {
-		io.WriteString(w, header)
-		io.WriteString(w, fmt.Sprintf("<h2>path not found!</h2>path not found: [%s]", r.URL.Path))
-		io.WriteString(w, footer)
+		sendHeader(w)
+		sendTag(w, "h2", "path not found!\n")
+		io.WriteString(w, fmt.Sprintf("path not found: [%s]\n", r.URL.Path))
+		sendFooter(w)
 		return
 	}
 
-	io.WriteString(w, header)
-	io.WriteString(w, "<h2>root handler</h2>nothing to see here")
-	io.WriteString(w, footer)
+	sendHeader(w)
+	sendTag(w, "h2", "root handler\n")
+	io.WriteString(w, "nothing to see here\n")
+	sendFooter(w)
 }
 
 func handlerHello(w http.ResponseWriter, r *http.Request, keepalive bool) {
 	msg := fmt.Sprintf("handlerHello: url=%s from=%s", r.URL.Path, r.RemoteAddr)
 	log.Print(msg)
 
-	io.WriteString(w, header)
-	io.WriteString(w, "<h2>hello handler</h2>hello world")
-	io.WriteString(w, footer)
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	sendHeader(w)
+	sendTag(w, "h2", "hello handler\n")
+	io.WriteString(w, "hello world\n")
+	sendFooter(w)
 }
