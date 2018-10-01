@@ -2,10 +2,10 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"io"
 	"log"
 	"net/http"
+	"os"
 )
 
 const (
@@ -76,6 +76,7 @@ func handlerRoot(w http.ResponseWriter, r *http.Request, keepalive bool) {
 	log.Print(msg)
 
 	if r.URL.Path != "/" {
+		w.WriteHeader(http.StatusNotFound)
 		sendHeader(w)
 		sendTag(w, "h2", "path not found!\n")
 		io.WriteString(w, fmt.Sprintf("path not found: [%s]\n", r.URL.Path))
