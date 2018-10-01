@@ -80,10 +80,11 @@ func sendTag(w http.ResponseWriter, tag, text string) {
 }
 
 func handlerRoot(w http.ResponseWriter, r *http.Request, keepalive bool) {
-	msg := fmt.Sprintf("handlerRoot: url=%s from=%s", r.URL.Path, r.RemoteAddr)
-	log.Print(msg)
 
 	if r.URL.Path != "/" {
+		msg := fmt.Sprintf("handlerRoot: url=%s from=%s - PATH NOT FOUND", r.URL.Path, r.RemoteAddr)
+		log.Print(msg)
+
 		w.WriteHeader(http.StatusNotFound)
 		sendHeader(w)
 		sendTag(w, "h2", "path not found!\n")
@@ -91,6 +92,9 @@ func handlerRoot(w http.ResponseWriter, r *http.Request, keepalive bool) {
 		sendFooter(w)
 		return
 	}
+
+	msg := fmt.Sprintf("handlerRoot: url=%s from=%s", r.URL.Path, r.RemoteAddr)
+	log.Print(msg)
 
 	sendHeader(w)
 	sendTag(w, "h2", "root handler\n")
