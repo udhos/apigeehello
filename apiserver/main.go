@@ -22,13 +22,16 @@ const (
 `
 )
 
+type handlerFunc func(w http.ResponseWriter, r *http.Request)
+
 var html bool
 
 func main() {
 
 	keepalive := true
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) { handlerRoot(w, r, keepalive) })
-	http.HandleFunc("/v1/hello", func(w http.ResponseWriter, r *http.Request) { handlerHello(w, r, keepalive) })
+
+	register("/", func(w http.ResponseWriter, r *http.Request) { handlerRoot(w, r, keepalive) })
+	register("/v1/hello", func(w http.ResponseWriter, r *http.Request) { handlerHello(w, r, keepalive) })
 
 	addr := ":3000"
 
@@ -41,6 +44,11 @@ func main() {
 	if err := listenAndServe(addr, nil, keepalive); err != nil {
 		log.Fatalf("listenAndServe: %s: %v", addr, err)
 	}
+}
+
+func register(path string, handler handlerFunc) {
+	log.Printf("registering path: [%s]", path)
+	http.HandleFunc(path, handler)
 }
 
 func listenAndServe(addr string, handler http.Handler, keepalive bool) error {
