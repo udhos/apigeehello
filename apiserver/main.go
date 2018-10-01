@@ -30,8 +30,9 @@ func main() {
 
 	keepalive := true
 
-	register("/", func(w http.ResponseWriter, r *http.Request) { handlerRoot(w, r, keepalive) })
-	register("/v1/hello", func(w http.ResponseWriter, r *http.Request) { handlerHello(w, r, keepalive) })
+	register("/", func(w http.ResponseWriter, r *http.Request) { handlerRoot(w, r, keepalive, "/") })
+	register("/v1/hello", func(w http.ResponseWriter, r *http.Request) { handlerHello(w, r, keepalive, "/v1/hello") })
+	register("/v1/hello/", func(w http.ResponseWriter, r *http.Request) { handlerHello(w, r, keepalive, "/v1/hello/") })
 
 	addr := ":3000"
 
@@ -79,17 +80,21 @@ func sendTag(w http.ResponseWriter, tag, text string) {
 	}
 }
 
-func handlerRoot(w http.ResponseWriter, r *http.Request, keepalive bool) {
+func sendNotFound(label string, w http.ResponseWriter, r *http.Request) {
+	msg := fmt.Sprintf("%s: url=%s from=%s - PATH NOT FOUND", label, r.URL.Path, r.RemoteAddr)
+	log.Print(msg)
 
-	if r.URL.Path != "/" {
-		msg := fmt.Sprintf("handlerRoot: url=%s from=%s - PATH NOT FOUND", r.URL.Path, r.RemoteAddr)
-		log.Print(msg)
+	w.WriteHeader(http.StatusNotFound)
+	sendHeader(w)
+	sendTag(w, "h2", "path not found!\n")
+	io.WriteString(w, fmt.Sprintf("path not found: [%s]\n", r.URL.Path))
+	sendFooter(w)
+}
 
-		w.WriteHeader(http.StatusNotFound)
-		sendHeader(w)
-		sendTag(w, "h2", "path not found!\n")
-		io.WriteString(w, fmt.Sprintf("path not found: [%s]\n", r.URL.Path))
-		sendFooter(w)
+func handlerRoot(w http.ResponseWriter, r *http.Request, keepalive bool, path string) {
+
+	if r.URL.Path != path {
+		sendNotFound("handlerRoot", w, r)
 		return
 	}
 
@@ -102,7 +107,13 @@ func handlerRoot(w http.ResponseWriter, r *http.Request, keepalive bool) {
 	sendFooter(w)
 }
 
-func handlerHello(w http.ResponseWriter, r *http.Request, keepalive bool) {
+func handlerHello(w http.ResponseWriter, r *http.Request, keepalive bool, path string) {
+
+	if r.URL.Path != path {
+		sendNotFound("handlerHello", w, r)
+		return
+	}
+
 	msg := fmt.Sprintf("handlerHello: url=%s from=%s", r.URL.Path, r.RemoteAddr)
 	log.Print(msg)
 
