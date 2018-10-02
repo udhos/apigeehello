@@ -111,7 +111,7 @@ func sendNotFound(label string, w http.ResponseWriter, r *http.Request, useJson 
 	}
 
 	sendHeader(w)
-	sendTag(w, "h2", notFound+"\n")
+	sendTag(w, "h2", "path not found\n")
 	io.WriteString(w, notFound+"\n")
 	sendFooter(w)
 }
