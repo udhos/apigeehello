@@ -141,7 +141,7 @@ func handlerRoot(w http.ResponseWriter, r *http.Request, keepalive bool, path st
 		return
 	}
 
-	msg := fmt.Sprintf("handlerRoot: url=%s from=%s acceptJson=%v", r.URL.Path, r.RemoteAddr, useJson)
+	msg := fmt.Sprintf("handlerRoot: url=%s from=%s json=%v", r.URL.Path, r.RemoteAddr, useJson)
 	log.Print(msg)
 
 	nothing := fmt.Sprintf("nothing to see here: [%s]", r.URL.Path)
@@ -173,7 +173,7 @@ func handlerHello(w http.ResponseWriter, r *http.Request, keepalive bool, path s
 		return
 	}
 
-	msg := fmt.Sprintf("handlerHello: url=%s from=%s acceptJson=%v", r.URL.Path, r.RemoteAddr, useJson)
+	msg := fmt.Sprintf("handlerHello: url=%s from=%s json=%v", r.URL.Path, r.RemoteAddr, useJson)
 	log.Print(msg)
 
 	w.Header().Set("Access-Control-Allow-Origin", "*")
