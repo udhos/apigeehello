@@ -24,12 +24,12 @@ const (
 )
 
 type responseHello struct {
-	Message string
-	Age     int
+	Message string `json:"message"`
+	Age     int    `json:"age"`
 }
 
 type responseError struct {
-	Message string
+	Message string `json:"message"`
 }
 
 type handlerFunc func(w http.ResponseWriter, r *http.Request)
