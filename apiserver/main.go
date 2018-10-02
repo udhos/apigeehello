@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -12,7 +13,7 @@ const (
 	header = `<!DOCTYPE html>
 <html>
   <head>
-    <title>gowebhello root page</title>
+    <title>apiserver root page</title>
   </head>
   <body>
 `
@@ -21,6 +22,15 @@ const (
 </html>
 `
 )
+
+type responseHello struct {
+	Message string
+	Age     int
+}
+
+type responseError struct {
+	Message string
+}
 
 type handlerFunc func(w http.ResponseWriter, r *http.Request)
 
@@ -80,47 +90,110 @@ func sendTag(w http.ResponseWriter, tag, text string) {
 	}
 }
 
-func sendNotFound(label string, w http.ResponseWriter, r *http.Request) {
-	msg := fmt.Sprintf("%s: url=%s from=%s - PATH NOT FOUND", label, r.URL.Path, r.RemoteAddr)
+func sendNotFound(label string, w http.ResponseWriter, r *http.Request, useJson bool) {
+	msg := fmt.Sprintf("%s: url=%s from=%s json=%v - PATH NOT FOUND", label, r.URL.Path, r.RemoteAddr, useJson)
 	log.Print(msg)
 
+	notFound := fmt.Sprintf("path not found: [%s]", r.URL.Path)
+
 	w.WriteHeader(http.StatusNotFound)
+
+	if useJson {
+		resp := responseError{notFound}
+		b, errMarshal := json.Marshal(resp)
+		if errMarshal != nil {
+			log.Printf("json marshal: %v", errMarshal)
+			return
+		}
+		w.Write(b)
+		io.WriteString(w, "\n")
+		return
+	}
+
 	sendHeader(w)
-	sendTag(w, "h2", "path not found!\n")
-	io.WriteString(w, fmt.Sprintf("path not found: [%s]\n", r.URL.Path))
+	sendTag(w, "h2", notFound+"\n")
+	io.WriteString(w, notFound+"\n")
 	sendFooter(w)
+}
+
+func acceptJson(r *http.Request) bool {
+	var found bool
+
+	for k, v := range r.Header {
+		if k == "Accept" {
+			for _, vv := range v {
+				if vv == "application/json" {
+					found = true
+				}
+			}
+		}
+	}
+
+	return found
 }
 
 func handlerRoot(w http.ResponseWriter, r *http.Request, keepalive bool, path string) {
 
+	useJson := acceptJson(r)
+
 	if r.URL.Path != path {
-		sendNotFound("handlerRoot", w, r)
+		sendNotFound("handlerRoot", w, r, useJson)
 		return
 	}
 
-	msg := fmt.Sprintf("handlerRoot: url=%s from=%s", r.URL.Path, r.RemoteAddr)
+	msg := fmt.Sprintf("handlerRoot: url=%s from=%s acceptJson=%v", r.URL.Path, r.RemoteAddr, useJson)
 	log.Print(msg)
+
+	nothing := fmt.Sprintf("nothing to see here: [%s]", r.URL.Path)
+
+	if useJson {
+		resp := responseError{nothing}
+		b, errMarshal := json.Marshal(resp)
+		if errMarshal != nil {
+			log.Printf("json marshal: %v", errMarshal)
+			return
+		}
+		w.Write(b)
+		io.WriteString(w, "\n")
+		return
+	}
 
 	sendHeader(w)
 	sendTag(w, "h2", "root handler\n")
-	io.WriteString(w, "nothing to see here\n")
+	io.WriteString(w, nothing+"\n")
 	sendFooter(w)
 }
 
 func handlerHello(w http.ResponseWriter, r *http.Request, keepalive bool, path string) {
 
+	useJson := acceptJson(r)
+
 	if r.URL.Path != path {
-		sendNotFound("handlerHello", w, r)
+		sendNotFound("handlerHello", w, r, useJson)
 		return
 	}
 
-	msg := fmt.Sprintf("handlerHello: url=%s from=%s", r.URL.Path, r.RemoteAddr)
+	msg := fmt.Sprintf("handlerHello: url=%s from=%s acceptJson=%v", r.URL.Path, r.RemoteAddr, useJson)
 	log.Print(msg)
 
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
+	hello := "hello world"
+
+	if useJson {
+		resp := responseHello{Message: hello, Age: 17}
+		b, errMarshal := json.Marshal(resp)
+		if errMarshal != nil {
+			log.Printf("json marshal: %v", errMarshal)
+			return
+		}
+		w.Write(b)
+		io.WriteString(w, "\n")
+		return
+	}
+
 	sendHeader(w)
 	sendTag(w, "h2", "hello handler\n")
-	io.WriteString(w, "hello world\n")
+	io.WriteString(w, hello+"\n")
 	sendFooter(w)
 }
