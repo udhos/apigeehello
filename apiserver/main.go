@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -34,6 +35,10 @@ type responseError struct {
 	Message string `json:"message"`
 }
 
+type responseEcho struct {
+	Message string `json:"message"`
+}
+
 type handlerFunc func(w http.ResponseWriter, r *http.Request)
 
 var html bool
@@ -45,6 +50,8 @@ func main() {
 	register("/", func(w http.ResponseWriter, r *http.Request) { handlerRoot(w, r, keepalive, "/") })
 	register("/v1/hello", func(w http.ResponseWriter, r *http.Request) { handlerHello(w, r, keepalive, "/v1/hello") })
 	register("/v1/hello/", func(w http.ResponseWriter, r *http.Request) { handlerHello(w, r, keepalive, "/v1/hello/") })
+	register("/v1/echo", func(w http.ResponseWriter, r *http.Request) { handlerEcho(w, r, keepalive, "/v1/echo") })
+	register("/v1/echo/", func(w http.ResponseWriter, r *http.Request) { handlerEcho(w, r, keepalive, "/v1/echo/") })
 
 	addr := ":3000"
 
@@ -97,7 +104,7 @@ func sendTag(w http.ResponseWriter, tag, text string) {
 }
 
 func sendNotFound(label string, w http.ResponseWriter, r *http.Request, useJson bool) {
-	msg := fmt.Sprintf("%s: url=%s from=%s json=%v - PATH NOT FOUND", label, r.URL.Path, r.RemoteAddr, useJson)
+	msg := fmt.Sprintf("%s: method=%s url=%s from=%s json=%v - PATH NOT FOUND", label, r.Method, r.URL.Path, r.RemoteAddr, useJson)
 	log.Print(msg)
 
 	notFound := fmt.Sprintf("path not found: [%s]", r.URL.Path)
@@ -148,7 +155,7 @@ func handlerRoot(w http.ResponseWriter, r *http.Request, keepalive bool, path st
 		return
 	}
 
-	msg := fmt.Sprintf("handlerRoot: url=%s from=%s json=%v", r.URL.Path, r.RemoteAddr, useJson)
+	msg := fmt.Sprintf("handlerRoot: method=%s url=%s from=%s json=%v", r.Method, r.URL.Path, r.RemoteAddr, useJson)
 	log.Print(msg)
 
 	nothing := fmt.Sprintf("nothing to see here: [%s]", r.URL.Path)
@@ -180,7 +187,7 @@ func handlerHello(w http.ResponseWriter, r *http.Request, keepalive bool, path s
 		return
 	}
 
-	msg := fmt.Sprintf("handlerHello: url=%s from=%s json=%v", r.URL.Path, r.RemoteAddr, useJson)
+	msg := fmt.Sprintf("handlerHello: method=%s url=%s from=%s json=%v", r.Method, r.URL.Path, r.RemoteAddr, useJson)
 	log.Print(msg)
 
 	w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -202,5 +209,53 @@ func handlerHello(w http.ResponseWriter, r *http.Request, keepalive bool, path s
 	sendHeader(w, "api hello\n")
 	sendTag(w, "h2", "hello handler\n")
 	io.WriteString(w, hello+"\n")
+	sendFooter(w)
+}
+
+func handlerEcho(w http.ResponseWriter, r *http.Request, keepalive bool, path string) {
+
+	useJson := acceptJson(r)
+
+	if r.URL.Path != path {
+		sendNotFound("handlerEcho", w, r, useJson)
+		return
+	}
+
+	if r.Method != http.MethodPost {
+		log.Printf("handlerEcho: method=%s url=%s from=%s json=%v - method not supported", r.Method, r.URL.Path, r.RemoteAddr, useJson)
+		w.Header().Set("Allow", "POST") // required by 405 error
+		http.Error(w, r.Method+" method not supported (only POST is supported)", 405)
+		return
+	}
+
+	msg := fmt.Sprintf("handlerEcho: method=%s url=%s from=%s json=%v", r.Method, r.URL.Path, r.RemoteAddr, useJson)
+	log.Print(msg)
+
+	body, errBody := ioutil.ReadAll(r.Body)
+	if errBody != nil {
+		log.Printf("handlerEcho: method=%s url=%s from=%s json=%v - body error: %v", r.Method, r.URL.Path, r.RemoteAddr, useJson, errBody)
+		http.Error(w, "Internal server error", 500)
+		return
+	}
+
+	echo := string(body)
+
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	if useJson {
+		resp := responseEcho{Message: echo}
+		b, errMarshal := json.Marshal(resp)
+		if errMarshal != nil {
+			log.Printf("json marshal: %v", errMarshal)
+			return
+		}
+		w.Write(b)
+		io.WriteString(w, "\n")
+		return
+	}
+
+	sendHeader(w, "api echo\n")
+	sendTag(w, "h2", "echo handler\n")
+	io.WriteString(w, echo+"\n")
 	sendFooter(w)
 }

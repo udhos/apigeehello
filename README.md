@@ -9,3 +9,7 @@
 ## Run
 
     apiserver
+
+## Test
+
+    curl -X POST -d '{foobar}' http://evertonmarques-eval-test.apigee.net/apigee-hello-world/echo -H "accept: application/json"
