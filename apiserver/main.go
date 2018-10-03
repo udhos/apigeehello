@@ -10,10 +10,12 @@ import (
 )
 
 const (
-	header = `<!DOCTYPE html>
+	headerTitleBefore = `<!DOCTYPE html>
 <html>
   <head>
-    <title>apiserver root page</title>
+    <title>`
+
+	headerTitleAfter = `</title>
   </head>
   <body>
 `
@@ -68,9 +70,13 @@ func listenAndServe(addr string, handler http.Handler, keepalive bool) error {
 	return server.ListenAndServe()
 }
 
-func sendHeader(w http.ResponseWriter) {
+func sendHeader(w http.ResponseWriter, title string) {
 	if html {
-		io.WriteString(w, header)
+		io.WriteString(w, headerTitleBefore)
+	}
+	io.WriteString(w, title)
+	if html {
+		io.WriteString(w, headerTitleAfter)
 	}
 }
 
@@ -110,7 +116,7 @@ func sendNotFound(label string, w http.ResponseWriter, r *http.Request, useJson 
 		return
 	}
 
-	sendHeader(w)
+	sendHeader(w, label+" - not found\n")
 	sendTag(w, "h2", "path not found\n")
 	io.WriteString(w, notFound+"\n")
 	sendFooter(w)
@@ -122,6 +128,7 @@ func acceptJson(r *http.Request) bool {
 	for k, v := range r.Header {
 		if k == "Accept" {
 			for _, vv := range v {
+				log.Printf("Accept: %s", vv)
 				if vv == "application/json" {
 					found = true
 				}
@@ -158,7 +165,7 @@ func handlerRoot(w http.ResponseWriter, r *http.Request, keepalive bool, path st
 		return
 	}
 
-	sendHeader(w)
+	sendHeader(w, "api root\n")
 	sendTag(w, "h2", "root handler\n")
 	io.WriteString(w, nothing+"\n")
 	sendFooter(w)
@@ -192,7 +199,7 @@ func handlerHello(w http.ResponseWriter, r *http.Request, keepalive bool, path s
 		return
 	}
 
-	sendHeader(w)
+	sendHeader(w, "api hello\n")
 	sendTag(w, "h2", "hello handler\n")
 	io.WriteString(w, hello+"\n")
 	sendFooter(w)
