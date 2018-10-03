@@ -1,7 +1,7 @@
 swagger: "2.0"
 info:
   version: "0.0.1"
-  title: Hello World API
+  title: apigee-hello-world
 host: 187.18.61.71:3000
 basePath: /v1
 schemes:
@@ -25,6 +25,15 @@ paths:
           description: Error
           schema:
             $ref: "#/definitions/ErrorResponse"
+  '/echo':
+    post:
+      description: Returns greetings to the caller
+      operationId: echo
+      responses:
+        default:
+          description: Echo Response
+          schema:
+            $ref: "#/definitions/EchoResponse"
 definitions:
   HelloWorldResponse:
     required:
@@ -35,6 +44,12 @@ definitions:
       age:
         type: number
   ErrorResponse:
+    required:
+      - message
+    properties:
+      message:
+        type: string
+  EchoResponse:
     required:
       - message
     properties:
