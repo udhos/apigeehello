@@ -8,9 +8,12 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"runtime"
 )
 
 const (
+	version = "0.0"
+
 	headerTitleBefore = `<!DOCTYPE html>
 <html>
   <head>
@@ -46,6 +49,8 @@ var html bool
 func main() {
 
 	keepalive := true
+
+	log.Printf("apiserver %s runtime %s GOMAXPROCS=%d", version, runtime.Version(), runtime.GOMAXPROCS(0))
 
 	register("/", func(w http.ResponseWriter, r *http.Request) { handlerRoot(w, r, keepalive, "/") })
 	register("/v1/hello", func(w http.ResponseWriter, r *http.Request) { handlerHello(w, r, keepalive, "/v1/hello") })
