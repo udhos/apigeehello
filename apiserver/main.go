@@ -58,13 +58,17 @@ func main() {
 	register("/v1/echo", func(w http.ResponseWriter, r *http.Request) { handlerEcho(w, r, keepalive, "/v1/echo") })
 	register("/v1/echo/", func(w http.ResponseWriter, r *http.Request) { handlerEcho(w, r, keepalive, "/v1/echo/") })
 
-	addr := ":3000"
+	addr := os.Getenv("LISTEN")
+
+	if addr == "" {
+		addr = ":3000"
+	}
 
 	if os.Getenv("HTML") != "" {
 		html = true
 	}
 
-	log.Printf("serving HTTP on TCP %s html=%v HTML=[%s]", addr, html, os.Getenv("HTML"))
+	log.Printf("serving HTTP on TCP %s LISTEN=[%s] html=%v HTML=[%s]", addr, os.Getenv("LISTEN"), html, os.Getenv("HTML"))
 
 	if err := listenAndServe(addr, nil, keepalive); err != nil {
 		log.Fatalf("listenAndServe: %s: %v", addr, err)
