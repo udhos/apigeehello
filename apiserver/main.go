@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"runtime"
+	"strconv"
 )
 
 const (
@@ -44,7 +45,11 @@ type responseEcho struct {
 
 type handlerFunc func(w http.ResponseWriter, r *http.Request)
 
-var html bool
+var (
+	html       bool
+	errorRate  int
+	errorCount int
+)
 
 func main() {
 
@@ -67,6 +72,15 @@ func main() {
 	if os.Getenv("HTML") != "" {
 		html = true
 	}
+
+	errorRateStr := os.Getenv("ERROR")
+	var errRate error
+	errorRate, errRate = strconv.Atoi(errorRateStr)
+	if errRate != nil {
+		log.Printf("bad error rate: ERROR=[%s]: %v", errorRateStr, errRate)
+	}
+
+	log.Printf("errorRate=%d ERROR=[%s]", errorRate, errorRateStr)
 
 	log.Printf("serving HTTP on TCP %s LISTEN=[%s] html=%v HTML=[%s]", addr, os.Getenv("LISTEN"), html, os.Getenv("HTML"))
 
@@ -155,6 +169,24 @@ func acceptJson(r *http.Request) bool {
 	return found
 }
 
+func forceError(label string, w http.ResponseWriter, r *http.Request) bool {
+	if errorRate < 1 {
+		return false
+	}
+
+	errorCount = (errorCount + 1) % errorRate
+
+	log.Printf("%s: forceError method=%s url=%s from=%s - rate=%d count=%d", label, r.Method, r.URL.Path, r.RemoteAddr, errorRate, errorCount)
+
+	if errorCount != 0 {
+		return false
+	}
+
+	log.Printf("%s: forceError method=%s url=%s from=%s - forcing error", label, r.Method, r.URL.Path, r.RemoteAddr)
+	http.Error(w, "Internal server error", 500)
+	return true
+}
+
 func handlerRoot(w http.ResponseWriter, r *http.Request, keepalive bool, path string) {
 
 	useJson := acceptJson(r)
@@ -166,6 +198,10 @@ func handlerRoot(w http.ResponseWriter, r *http.Request, keepalive bool, path st
 
 	msg := fmt.Sprintf("handlerRoot: method=%s url=%s from=%s json=%v", r.Method, r.URL.Path, r.RemoteAddr, useJson)
 	log.Print(msg)
+
+	if forceError("handlerRoot", w, r) {
+		return
+	}
 
 	nothing := fmt.Sprintf("nothing to see here: [%s]", r.URL.Path)
 
@@ -198,6 +234,10 @@ func handlerHello(w http.ResponseWriter, r *http.Request, keepalive bool, path s
 
 	msg := fmt.Sprintf("handlerHello: method=%s url=%s from=%s json=%v", r.Method, r.URL.Path, r.RemoteAddr, useJson)
 	log.Print(msg)
+
+	if forceError("handlerHello", w, r) {
+		return
+	}
 
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
@@ -239,6 +279,10 @@ func handlerEcho(w http.ResponseWriter, r *http.Request, keepalive bool, path st
 
 	msg := fmt.Sprintf("handlerEcho: method=%s url=%s from=%s json=%v", r.Method, r.URL.Path, r.RemoteAddr, useJson)
 	log.Print(msg)
+
+	if forceError("handlerEcho", w, r) {
+		return
+	}
 
 	body, errBody := ioutil.ReadAll(r.Body)
 	if errBody != nil {
